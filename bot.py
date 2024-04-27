@@ -1,4 +1,5 @@
 from aiogram import Bot, Dispatcher, types
+from aiogram.dispatcher import FSMContext, State, StatesGroup
 from aiogram.filters.command import Command
 from aiohttp import web
 import os
@@ -18,8 +19,23 @@ def butt(txt):
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True, input_field_placeholder="Выберите...")
     return keyboard
 
+class Form(StatesGroup):
+    login = State()  # Состояние для ввода логина
+    password = State()  # Состояние для ввода пароля
+
 user_dict = {}  # Пустой словарь для хранения соответствия username к chat_id
 
+@dp.message_handler(Command("start"))
+async def cmd_start(message: types.Message):
+    await Form.login.set()
+    await message.reply("Введите ваш логин:")
+
+@dp.message_handler(state=Form.login)
+async def process_login(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['login'] = message.text
+    await Form.next()
+    await message.reply("Введите ваш пароль:")
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     chat_id = message.chat.id
