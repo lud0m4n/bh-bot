@@ -90,7 +90,7 @@ app.add_routes([web.post('/notify', handle)])
 async def main():
     # Запуск сервера и поллинга бота
     bot_task = dp.start_polling(bot)
-    web_task = web._run_app(app, port=os.getenv('BOT_PORT'))
+    web_task = web._run_app(app, port=int(os.getenv('BOT_PORT')))
     await asyncio.gather(bot_task, web_task)
 
 if __name__ == "__main__":
