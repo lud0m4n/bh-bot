@@ -44,7 +44,7 @@ async def process_password(message: types.Message, state: FSMContext):
     username = message.from_user.username
     user_data = await state.get_data()
     response = await send_credentials(user_data['login'], message.text, username)  # Предполагается, что функция send_credentials отправляет данные на бэкенд
-    if response.status == 200:  # Проверяем успешность авторизации
+    if response.status_code == 200:  # Проверяем успешность авторизации
         user_dict[message.from_user.username] = message.chat.id
         await message.reply("Вы успешно авторизованы!")
     else:
