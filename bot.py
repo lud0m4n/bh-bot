@@ -54,7 +54,7 @@ async def process_password(message: types.Message, state: FSMContext):
 async def send_credentials(login, password, username):
     host = os.getenv('REST_HOST')
     try:
-        response = requests.post(f'{host}/tg-auth', json={'email': login, 'password': password, 'username': username})
+        response = requests.post(f'{host}/auth/bot', json={'email': login, 'password': password, 'username': username})
         return response
     except:
         return False  
