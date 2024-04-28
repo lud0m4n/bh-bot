@@ -30,7 +30,7 @@ user_dict = {}  # Пустой словарь для хранения соотв
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.set_state(Form.login)
-    await message.reply("Введите ваш логин:")
+    await message.reply("Введите ваш адрес электронной почты:")
     await state.set_state(Form.login)
 
 @dp.message(Form.login)
@@ -54,7 +54,7 @@ async def process_password(message: types.Message, state: FSMContext):
 async def send_credentials(login, password, username):
     host = os.getenv('REST_HOST')
     try:
-        response = requests.post(f'{host}/botauth', json={'login': login, 'password': password, 'username': username})
+        response = requests.post(f'{host}/tg-auth', json={'email': login, 'password': password, 'username': username})
         return response
     except:
         return False  
