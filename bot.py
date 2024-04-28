@@ -52,8 +52,9 @@ async def process_password(message: types.Message, state: FSMContext):
     await state.clear()  # Завершаем состояние
 
 async def send_credentials(login, password, username):
+    host = os.getenv('REST_HOST')
     try:
-        response = requests.post(f'{os.getenv('REST_HOST')}/botauth', json={'login': login, 'password': password, 'username': username})
+        response = requests.post(f'{host}/botauth', json={'login': login, 'password': password, 'username': username})
         return response
     except:
         return False  
