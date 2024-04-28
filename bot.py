@@ -1,11 +1,13 @@
-from aiogram import Bot, Dispatcher, types
-from aiogram.dispatcher import FSMContext, State, StatesGroup
+from aiogram import Bot, Dispatcher, F, Router, html, types
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters.command import Command
 from aiohttp import web
 import os
 from dotenv import load_dotenv
 import asyncio
 import logging
+import requests
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -13,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 API_TOKEN = os.getenv('API_TOKEN')
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
-
+form_router = Router()
 def butt(txt):
     kb = [[types.KeyboardButton(text=txt)]]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True, input_field_placeholder="Выберите...")
@@ -25,24 +27,36 @@ class Form(StatesGroup):
 
 user_dict = {}  # Пустой словарь для хранения соответствия username к chat_id
 
-@dp.message_handler(Command("start"))
-async def cmd_start(message: types.Message):
-    await Form.login.set()
-    await message.reply("Введите ваш логин:")
-
-@dp.message_handler(state=Form.login)
-async def process_login(message: types.Message, state: FSMContext):
-    async with state.proxy() as data:
-        data['login'] = message.text
-    await Form.next()
-    await message.reply("Введите ваш пароль:")
 @dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    chat_id = message.chat.id
-    username = message.from_user.username  # Получаем username пользователя
-    if username:
-        user_dict[username] = chat_id  # Сохраняем chat_id по username
-    await message.answer("Добро пожаловать!")
+async def cmd_start(message: types.Message, state: FSMContext):
+    await state.set_state(Form.login)
+    await message.reply("Введите ваш логин:")
+    await state.set_state(Form.login)
+
+@dp.message(Form.login)
+async def process_login(message: types.Message, state: FSMContext):
+    await state.update_data(login=message.text)
+    await state.set_state(Form.password)
+    await message.reply("Введите ваш пароль:")
+
+@dp.message(Form.password)
+async def process_password(message: types.Message, state: FSMContext):
+    username = message.from_user.username
+    user_data = await state.get_data()
+    response = await send_credentials(user_data['login'], message.text, username)  # Предполагается, что функция send_credentials отправляет данные на бэкенд
+    if response.status == 200:  # Проверяем успешность авторизации
+        user_dict[message.from_user.username] = message.chat.id
+        await message.reply("Вы успешно авторизованы!")
+    else:
+        await message.reply("Ошибка авторизации, попробуйте снова.")
+    await state.clear()  # Завершаем состояние
+
+async def send_credentials(login, password, username):
+    try:
+        response = requests.post(f'{os.getenv('REST_HOST')}/botauth', json={'login': login, 'password': password, 'username': username})
+        return response
+    except:
+        return False  
 
 async def send_notification(username):
     print(user_dict)
@@ -75,7 +89,7 @@ app.add_routes([web.post('/notify', handle)])
 async def main():
     # Запуск сервера и поллинга бота
     bot_task = dp.start_polling(bot)
-    web_task = web._run_app(app, port=8080)
+    web_task = web._run_app(app, port=os.getenv('BOT_PORT'))
     await asyncio.gather(bot_task, web_task)
 
 if __name__ == "__main__":
